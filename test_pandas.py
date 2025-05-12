@@ -11,6 +11,31 @@ FINAL_DF_COLUMNS = ['list_code_stage', 'list_entrprise', 'list_email']
 def normaliser_code_stage(code):
     return re.sub(r'[12]I$', '', str(code))
 
+def exel_to_csv(dossier_source, dossier_destination):
+    
+    os.makedirs(dossier_destination, exist_ok=True)  # Crée si inexistant
+
+    # Suppression du contenu du dossier de destination
+    for fichier in os.listdir(dossier_destination):
+        chemin_fichier = os.path.join(dossier_destination, fichier)
+        if os.path.isfile(chemin_fichier):
+            os.remove(chemin_fichier)
+
+    # Conversion des fichiers Excel en CSV
+    for fichier in os.listdir(dossier_source):
+        if fichier.endswith((".xlsx", ".xls")):
+            chemin_excel = os.path.join(dossier_source, fichier)
+            nom_csv = os.path.splitext(fichier)[0] + ".csv"
+            chemin_csv = os.path.join(dossier_destination, nom_csv)
+            
+            try:
+                df = pd.read_excel(chemin_excel)
+                df.to_csv(chemin_csv, sep=";", encoding="ISO-8859-1", index=False)
+                print(f"✅ Converti : {fichier} → {nom_csv}")
+            except Exception as e:
+                print(f"❌ Erreur avec {fichier} : {e}")
+
+
 def fusionner_fichiers_par_code(dossier):
     print("🔍 Searching for CSV files to merge...")
     fichiers_csv = glob.glob(os.path.join(dossier, "*.csv"))
@@ -143,7 +168,12 @@ def csv_traitement(dossier):
 
 def main():
     dossier_cible = "csv_folder"
+    dossier_source = "exel_folder"
+
     print("🚀 Starting process...")
+
+    exel_to_csv(dossier_source, dossier_cible)
+
     fusionner_fichiers_par_code(dossier_cible)
 
     df = csv_traitement(dossier_cible)
@@ -154,5 +184,4 @@ def main():
     else:
         print("❌ No data to write.")
 
-if __name__ == '__main__':
-    main()
+main()

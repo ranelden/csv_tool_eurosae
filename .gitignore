@@ -4,3 +4,6 @@ data/
 __pycache__/
 *.pyc
 .env
+exel_folder/
+*.xls
+*.xlsx
