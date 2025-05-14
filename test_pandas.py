@@ -4,9 +4,11 @@ import pandas as pd
 import re
 from collections import defaultdict
 import numpy as np
+import re
 
 CURRENT_YEAR = 2025
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entrprise', 'list_email']
+BAN_LIST = [r"MBDA.*", r"DGA.*", r"PER.*"]
 
 def normaliser_code_stage(code):
     return re.sub(r'[12]I$', '', str(code))
@@ -70,13 +72,18 @@ def fusionner_fichiers_par_code(dossier):
             except Exception as e:
                 print(f"❌ Error deleting {chemin} : {e}")
 
-def clear_csv(csv_path):
+def clear_csv(df):
+    """
     df = pd.read_csv(csv_path, encoding='iso-8859-1', sep=';')
     df.columns = df.columns.str.replace('\n', '').str.strip()
-
+    """
     entreprise_2025 = df[df['Stageannée'] == CURRENT_YEAR]['Employeurcode'].unique()
     df = df[~df['Employeurcode'].isin(entreprise_2025)]
     df = df.drop_duplicates(subset='Employeurcode', keep='first')
+    
+    for pattern in BAN_LIST:
+        df = df[~df['Employeurcode'].str.contains(pattern, regex=True)]
+    
 
     return df
 
@@ -154,6 +161,7 @@ def csv_traitement(dossier):
         try:
             df = pd.read_csv(fichier, encoding='iso-8859-1', sep=';')
             df.columns = df.columns.str.replace('\n', '').str.strip()
+            df = clear_csv(df)
             csv_list.append(df)
         except Exception as e:
             print(f"❌ Error reading file {fichier} : {e}")
@@ -163,6 +171,11 @@ def csv_traitement(dossier):
         return
 
     csv = pd.concat(csv_list, ignore_index=True)
+
+    csv_cp = csv
+    csv_cp.to_excel('result_folder/result-1.xlsx')
+    csv_cp.to_csv('result_folder/result-1.csv')
+
     final_csv = groupping(csv)
     return final_csv
 
@@ -179,9 +192,11 @@ def main():
     df = csv_traitement(dossier_cible)
 
     if df is not None:
+        df.to_excel('result_folder/result.xlsx', index=False)
         df.to_csv('result_folder/result.csv', index=False)
         print("✅ Final CSV written to result_folder/result.csv")
     else:
         print("❌ No data to write.")
 
-main()
+if __name__ == "__main__":
+    main()
