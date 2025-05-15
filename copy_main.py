@@ -14,10 +14,6 @@ BAN_LIST = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
 def normaliser_code_stage(code):
     return re.sub(r'[12]I$', '', str(code))
 
-def nettoyer_retours_ligne(df, colonne):
-    df[colonne] = df[colonne].astype(str).str.replace(r'[\n\r]', '', regex=True)
-    return df
-
 def exel_to_csv(dossier_source, dossier_destination):
     
     os.makedirs(dossier_destination, exist_ok=True)  # Crée si inexistant
@@ -106,75 +102,83 @@ def clear_csv(df):
 
     return df
 
-def groupping(csv):
-    """
-    Groups data by `Employeuremail` and merges associated `Employeurcode` and `Stagecode`.
-    """
+def groupping(csv): 
+    entreprise_dico = {}
     final_df = pd.DataFrame(columns=FINAL_DF_COLUMNS)
 
-    # Get distinct emails
-    distinct_emails = csv['Employeuremail'].unique()
+    # Get unique values
+    dinstinct_entreprise = csv['Employeurcode'].unique()
+    doublon_email = csv['Employeuremail'][csv['Employeuremail'].duplicated(keep=False)].unique()
 
-    print("🔎 Grouping data by unique emails...")
+    print("🔎 Grouping employers by unique codes and emails...")
 
-    for email in distinct_emails:
+    # Populate entreprise_dico with unique stage codes for each enterprise
+    for entreprise in dinstinct_entreprise:
+        entreprise_dico[entreprise] = csv[csv['Employeurcode'] == entreprise]['Stagecode'].unique()
+
+    # Handle duplicate emails
+    for email in doublon_email:
         if pd.isna(email):
             continue
 
-        # Filter rows for the current email
-        email_rows = csv[csv['Employeuremail'] == email]
+        
 
-        # Merge associated `Employeurcode` and `Stagecode`
-        merged_entreprises = email_rows['Employeurcode'].unique()
-        merged_stages = email_rows['Stagecode'].unique()
+        # Get all enterprises associated with this email
+        entreprises_with_email = csv[csv['Employeuremail'] == email]['Employeurcode'].unique()
 
-        # Add to final DataFrame
+        # Merge stage lists for all enterprises with this email
+        merged_stages = np.concatenate([
+            entreprise_dico[entreprise]
+            for entreprise in entreprises_with_email
+            if entreprise in entreprise_dico and entreprise_dico[entreprise] is not None
+        ])
+
+        # Update the first enterprise with the merged stages
+        if len(entreprises_with_email) > 0:
+            entreprise_dico[entreprises_with_email[0]] = np.unique(merged_stages)
+
+        # Set other enterprises to None (mark for deletion)
+        for entreprise in entreprises_with_email[1:]:
+            entreprise_dico[entreprise] = None
+
+    # Clean up the dictionary to remove marked entries
+    entreprise_dico = nettoyer_dico(entreprise_dico)
+    print(f"🔍 Found {len(entreprise_dico)} unique employers after cleaning. {entreprise_dico}")
+
+    # Build the final DataFrame
+    for entreprise in entreprise_dico.keys():
+        if entreprise_dico[entreprise] is None:
+            continue
+
+        temp_list_entreprise = [entreprise]
+        for entreprise_to_compare in entreprise_dico.keys():
+            if (
+                entreprise != entreprise_to_compare and
+                np.array_equal(np.sort(entreprise_dico[entreprise]), np.sort(entreprise_dico[entreprise_to_compare]))
+            ):
+                temp_list_entreprise.append(entreprise_to_compare)
+
         final_df.loc[len(final_df)] = [
-            tuple(sorted(merged_stages)),
-            tuple(sorted(merged_entreprises)),
-            (email,)
+            tuple(entreprise_dico[entreprise].tolist()),
+            tuple(sorted(temp_list_entreprise)),
+            tuple(csv[csv['Employeurcode'].isin(temp_list_entreprise)]['Employeuremail'].unique().tolist())
         ]
 
+    final_df = final_df.drop_duplicates(keep='first')    
     return final_df
 
 def groupping_merged_stages(csv):
 
-    stage_combinaison = csv[FINAL_DF_COLUMNS[0]].unique()
+    stage_combinaison = csv[csv[FINAL_DF_COLUMNS[0]]].unique()
     grpouped_stages = pd.DataFrame(columns=FINAL_DF_COLUMNS_2)
 
     for stage in stage_combinaison: 
-        #print(", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]].to_list()]))
         grpouped_stages.loc[len(grpouped_stages)] = [
             stage,
-            ", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]].to_list()]),
-            ", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[1]].to_list()])
+            csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]],
+            csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[1]]
         ]
     return grpouped_stages
-
-def I1_I2_fusion(csv):
-    
-    for idx in csv.index:
-        list_stage = csv.at[idx, FINAL_DF_COLUMNS_2[0]]
-        temp = []
-        
-        if not isinstance(list_stage, (list, tuple)) or len(list_stage) < 2:
-            continue
-        
-        for i in range(len(list_stage) - 1):
-            stage1 = normaliser_code_stage(list_stage[i])
-            stage2 = normaliser_code_stage(list_stage[i + 1])
-            if stage1 == stage2:
-                continue
-            temp.append(list_stage[i])
-        
-        # Ajouter le dernier stage s’il est unique
-        last = normaliser_code_stage(list_stage[-1])
-        if not temp or temp[-1] != last:
-            temp.append(list_stage[-1])
-
-        csv.at[idx, FINAL_DF_COLUMNS_2[0]] = temp
-
-    return csv
 
 def nettoyer_dico(dico):
     nouveau_dico = {}
@@ -203,18 +207,13 @@ def csv_traitement(dossier):
 
     csv = pd.concat(csv_list, ignore_index=True)
 
-    csv = nettoyer_retours_ligne(csv, 'Employeuremail')
-
     csv_cp = csv
     csv_cp.to_excel('result_folder/result-1.xlsx')
     csv_cp.to_csv('result_folder/result-1.csv')
 
     final_csv = groupping(csv)
     final_csv.to_csv('result_folder/result+1.csv')
-
     final_csv = groupping_merged_stages(final_csv)
-    final_csv = I1_I2_fusion(final_csv)
-
     return final_csv
 
 def main():
