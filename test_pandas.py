@@ -18,6 +18,11 @@ def nettoyer_retours_ligne(df, colonne):
     df[colonne] = df[colonne].astype(str).str.replace(r'[\n\r]', '', regex=True)
     return df
 
+def dossier_utils_to_csv():# inutil pour l instant
+    excel = pd.read_excel('utils/black_list.xlsx')
+    print(excel)
+    excel.to_csv('utils/black_list.csv', index=False)
+
 def exel_to_csv(dossier_source, dossier_destination):
     
     os.makedirs(dossier_destination, exist_ok=True)  # Crée si inexistant
@@ -42,6 +47,12 @@ def exel_to_csv(dossier_source, dossier_destination):
             except Exception as e:
                 print(f"❌ Erreur avec {fichier} : {e}")
 
+def nettoyer_dico(dico):
+    nouveau_dico = {}
+    for k, v in dico.items():
+        if isinstance(v, np.ndarray) and v.size > 0 and isinstance(k, str) and len(k) > 2:
+            nouveau_dico[k] = v
+    return nouveau_dico
 
 def fusionner_fichiers_par_code(dossier):
     print("🔍 Searching for CSV files to merge...")
@@ -77,6 +88,14 @@ def fusionner_fichiers_par_code(dossier):
             except Exception as e:
                 print(f"❌ Error deleting {chemin} : {e}")
 
+def black_listing(csv):
+    
+    black_list = pd.read_csv('utils/black_list.csv', sep=";")
+    black_list = [i for i in black_list['Code Employeur']]
+    csv = csv[~csv['Employeurcode'].isin(black_list)]
+    
+    return csv
+
 def clear_csv(df):
     """
     Cleans the DataFrame by:
@@ -102,9 +121,23 @@ def clear_csv(df):
     for pattern in BAN_LIST:
         df = df[~df['Employeuremail'].str.contains(pattern, regex=True, na=False)]
         df = df[~df['Employeurcode'].str.contains(pattern, regex=True, na=False)]
+
+    df = black_listing(df)
     
 
     return df
+
+def replace_email(csv):
+    email_list = pd.read_csv('utils/mail.csv', sep=";", encoding='latin1' )
+    entreprise_list = [entreprise for entreprise in email_list['Code Employeur']]
+
+    for idx in csv.index:
+        case = csv.at[idx, 'Employeurcode']
+        if case in entreprise_list:
+            csv.at[idx, 'Employeuremail'] = email_list[email_list['Code Employeur'] == case]['email de contact'].unique()
+            
+
+    return csv
 
 def groupping(csv):
     """
@@ -145,9 +178,9 @@ def groupping_merged_stages(csv):
     for stage in stage_combinaison: 
         #print(", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]].to_list()]))
         grpouped_stages.loc[len(grpouped_stages)] = [
-            stage,
-            ", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]].to_list()]),
-            ", ".join([i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[1]].to_list()])
+            [i for i in stage],
+            [i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[2]].to_list()],
+            [i[0] for i in csv[csv[FINAL_DF_COLUMNS[0]] == stage][FINAL_DF_COLUMNS[1]].to_list()]
         ]
     return grpouped_stages
 
@@ -173,15 +206,9 @@ def I1_I2_fusion(csv):
             temp.append(list_stage[-1])
 
         csv.at[idx, FINAL_DF_COLUMNS_2[0]] = temp
+    
 
     return csv
-
-def nettoyer_dico(dico):
-    nouveau_dico = {}
-    for k, v in dico.items():
-        if isinstance(v, np.ndarray) and v.size > 0 and isinstance(k, str) and len(k) > 2:
-            nouveau_dico[k] = v
-    return nouveau_dico
 
 def csv_traitement(dossier):
     print("📁 Processing cleaned CSV files...")
@@ -205,6 +232,8 @@ def csv_traitement(dossier):
 
     csv = nettoyer_retours_ligne(csv, 'Employeuremail')
 
+    csv = replace_email(csv)
+
     csv_cp = csv
     csv_cp.to_excel('result_folder/result-1.xlsx')
     csv_cp.to_csv('result_folder/result-1.csv')
@@ -222,6 +251,8 @@ def main():
     dossier_source = "exel_folder"
 
     print("🚀 Starting process...")
+
+    #dossier_utils_to_csv()
 
     exel_to_csv(dossier_source, dossier_cible)
 

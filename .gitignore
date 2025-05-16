@@ -7,3 +7,5 @@ __pycache__/
 exel_folder/
 *.xls
 *.xlsx
+to_do_list.txt
+utils/
