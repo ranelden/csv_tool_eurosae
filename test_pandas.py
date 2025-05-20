@@ -5,17 +5,18 @@ import re
 from collections import defaultdict
 import numpy as np
 import re
+import conf_manager
 
 CURRENT_YEAR = 2025
-FINAL_DF_COLUMNS = ['list_code_stage', 'list_entrprise', 'list_email']
-FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entrprise']
+FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
+FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
 BAN_LIST = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
 
 def normaliser_code_stage(code):
     return re.sub(r'[12]I$', '', str(code))
 
 def nettoyer_retours_ligne(df, colonne):
-    df[colonne] = df[colonne].astype(str).str.replace(r'[\n\r]', '', regex=True)
+    df[colonne] = df[colonne].astype(str).str.replace(r'[\n\r]', ';', regex=True)
     return df
 
 def dossier_utils_to_csv():# inutil pour l instant
@@ -134,8 +135,8 @@ def replace_email(csv):
     for idx in csv.index:
         case = csv.at[idx, 'Employeurcode']
         if case in entreprise_list:
-            csv.at[idx, 'Employeuremail'] = email_list[email_list['Code Employeur'] == case]['email de contact'].unique()
-            
+            temp  = ", ".join([str(i) for i in email_list[email_list['Code Employeur'] == case]['email de contact'].unique()])
+            csv.at[idx, 'Employeuremail'] = temp
 
     return csv
 
@@ -206,9 +207,42 @@ def I1_I2_fusion(csv):
             temp.append(list_stage[-1])
 
         csv.at[idx, FINAL_DF_COLUMNS_2[0]] = temp
+
+    
     
 
     return csv
+
+def normalize_outplut (csv):
+    for idx in csv.index:
+        
+        csv.at[idx, 'list_code_stage'] = "; ".join([str(code) for code in csv.at[idx, 'list_code_stage']])  
+        csv.at[idx, 'list_email'] = "; ".join([str(email) for email in csv.at[idx, 'list_email']])  
+        csv.at[idx, 'list_entreprise'] = "; ".join([str(entreprise) for entreprise in csv.at[idx, 'list_entreprise']])  
+        
+    return csv
+
+def I1_I2_fusion_correction(csv):
+    csv_copy = csv.copy()
+
+    for idx in csv.index:
+        for idx_ in csv.index:
+            if idx_ == idx:
+                continue
+
+            if csv.at[idx, 'list_code_stage'] == csv.at[idx_, 'list_code_stage']:
+                emails_1 = csv.at[idx, 'list_email']
+                emails_2 = csv.at[idx_, 'list_email']
+                entreprises_1 = csv.at[idx, 'list_entreprise']
+                entreprises_2 = csv.at[idx_, 'list_entreprise']
+
+                # Concatène les listes directement
+                csv_copy.at[idx, 'list_email'] = emails_1 + emails_2
+                csv_copy.at[idx, 'list_entreprise'] = entreprises_1 + entreprises_2
+
+    csv_copy = csv_copy.drop_duplicates(subset='list_code_stage', keep='first')
+
+    return csv_copy
 
 def csv_traitement(dossier):
     print("📁 Processing cleaned CSV files...")
@@ -244,11 +278,16 @@ def csv_traitement(dossier):
     final_csv = groupping_merged_stages(final_csv)
     final_csv = I1_I2_fusion(final_csv)
 
+    final_csv = normalize_outplut(final_csv)
+
+    final_csv = I1_I2_fusion_correction(final_csv)
+
     return final_csv
 
 def main():
     dossier_cible = "csv_folder"
-    dossier_source = "exel_folder"
+    dossier_source = conf_manager.get("input_folder")
+    print(dossier_source)
 
     print("🚀 Starting process...")
 
@@ -260,9 +299,11 @@ def main():
 
     df = csv_traitement(dossier_cible)
 
+    result_folder = conf_manager.get("output_folder")
+
     if df is not None:
-        df.to_excel('result_folder/result.xlsx', index=False)
-        df.to_csv('result_folder/result.csv', index=False)
+        df.to_excel(f'{result_folder}/result.xlsx', index=False)
+        df.to_csv(f'{result_folder}/result.csv', index=False)
         print("✅ Final CSV written to result_folder/result.csv")
     else:
         print("❌ No data to write.")

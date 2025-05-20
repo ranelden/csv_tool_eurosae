@@ -1,0 +1,8 @@
+{
+    "input_folder": "excel_folder",
+    "output_folder": "result_folder",
+    "utils_list": [
+        "utils/black_list.csv",
+        "utils/mail.csv"
+    ]
+}
