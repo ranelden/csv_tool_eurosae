@@ -4,13 +4,15 @@ import pandas as pd
 import re
 from collections import defaultdict
 import numpy as np
-import re
 import conf_manager
+import ban_list_manager
+import json
 
 CURRENT_YEAR = 2025
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
 FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
-BAN_LIST = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
+#BAN_LIST_PAT = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
+BAN_LIST_PAT = ban_list_manager.get_patt_list()
 
 def normaliser_code_stage(code):
     return re.sub(r'[12]I$', '', str(code))
@@ -27,20 +29,20 @@ def dossier_utils_to_csv():# inutil pour l instant
 def exel_to_csv(dossier_source, dossier_destination):
     
     os.makedirs(dossier_destination, exist_ok=True)  # Crée si inexistant
-
+    
     # Suppression du contenu du dossier de destination
     for fichier in os.listdir(dossier_destination):
         chemin_fichier = os.path.join(dossier_destination, fichier)
         if os.path.isfile(chemin_fichier):
             os.remove(chemin_fichier)
-
+    
     # Conversion des fichiers Excel en CSV
     for fichier in os.listdir(dossier_source):
         if fichier.endswith((".xlsx", ".xls")):
             chemin_excel = os.path.join(dossier_source, fichier)
             nom_csv = os.path.splitext(fichier)[0] + ".csv"
             chemin_csv = os.path.join(dossier_destination, nom_csv)
-            
+            print(chemin_excel)
             try:
                 df = pd.read_excel(chemin_excel)
                 df.to_csv(chemin_csv, sep=";", encoding="ISO-8859-1", index=False)
@@ -91,8 +93,11 @@ def fusionner_fichiers_par_code(dossier):
 
 def black_listing(csv):
     
-    black_list = pd.read_csv('utils/black_list.csv', sep=";")
-    black_list = [i for i in black_list['Code Employeur']]
+    #black_list = pd.read_csv('utils/black_list.csv', sep=";")
+    #black_list = [i for i in black_list['Code Employeur']]
+
+    black_list = ban_list_manager.get_ban_list()
+
     csv = csv[~csv['Employeurcode'].isin(black_list)]
     
     return csv
@@ -119,7 +124,7 @@ def clear_csv(df):
     df = df.dropna(subset=['Employeuremail'])
 
     # Filter out banned patterns
-    for pattern in BAN_LIST:
+    for pattern in BAN_LIST_PAT:
         df = df[~df['Employeuremail'].str.contains(pattern, regex=True, na=False)]
         df = df[~df['Employeurcode'].str.contains(pattern, regex=True, na=False)]
 
@@ -128,8 +133,8 @@ def clear_csv(df):
 
     return df
 
-def replace_email(csv):
-    email_list = pd.read_csv('utils/mail.csv', sep=";", encoding='latin1' )
+def replace_email(csv, path):
+    email_list = pd.read_csv(path, sep=";", encoding='latin1' )
     entreprise_list = [entreprise for entreprise in email_list['Code Employeur']]
 
     for idx in csv.index:
@@ -266,7 +271,10 @@ def csv_traitement(dossier):
 
     csv = nettoyer_retours_ligne(csv, 'Employeuremail')
 
-    csv = replace_email(csv)
+    with open('conf/mail.json') as f:
+        path = json.load(f)
+    if path["path"]:
+        csv = replace_email(csv, path["path"])
 
     csv_cp = csv
     csv_cp.to_excel('result_folder/result-1.xlsx')

@@ -1,0 +1,9 @@
+{
+    "ban_list": [],
+    "ban_pattern": [
+        "MBDA.*",
+        ".*@NIIT.*",
+        "DGA.*",
+        "PER.*"
+    ]
+}
