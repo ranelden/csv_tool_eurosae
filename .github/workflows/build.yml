@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build Windows EXE (Standalone)
 on: 
   push:
     branches: [ main, master ]
@@ -20,20 +20,18 @@ jobs:
     - name: Install dependencies  
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install -r requirements.txt
+        pip install pyinstaller pandas openpyxl PySide6
         
-    - name: Build EXE with PyInstaller (onedir)
+    - name: Build EXE (onefile - simple)
       run: |
-        pyinstaller --onedir --windowed --add-data="conf;conf" --name="MonApplication" main_gui.py
+        pyinstaller --onefile --windowed --name="CSV-Handler" main_standalone.py
         
-    - name: List what was built (debug)
+    - name: Test EXE exists
       run: |
         dir dist
-        dir "dist/MonApplication"
         
-    - name: Upload EXE artifact
+    - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
-        name: windows-executable
-        path: dist/
+        name: csv-handler-exe
+        path: dist/CSV-Handler.exe
