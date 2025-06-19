@@ -1,0 +1,10 @@
+pandas
+pillow
+numpy
+pyside6
+json
+sys
+glob
+os
+re
+collections
