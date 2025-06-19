@@ -221,7 +221,27 @@ class MailWidget(QWidget):
 
     def add_mail_file(self, path):
         mail_manager.csv_as_list(path)
-        
+
+class SubMainWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        self.title = QLabel("SUB processing")
+        self.title.setAlignment(Qt.AlignCenter)
+
+        self.mail_file_selector = FileSelector("choose compiled file :")
+        self.mail_file_selector.fileSelected.connect(self.add_file)
+
+        layout.addWidget(self.title)
+        layout.addWidget(self.mail_file_selector)
+
+        self.setLayout(layout)
+    
+    def add_file(self, path):
+        test_pandas.sub_main(path)
+
+
 class MainWindow(QMainWindow):
     def __init__ (self):
         super().__init__()
@@ -233,10 +253,13 @@ class MainWindow(QMainWindow):
         self.tab1 = AcceuilWidget()  
         self.tab2 = BanWidget()
         self.tab3 = MailWidget()
+        self.tab4 = SubMainWidget()
 
         self.tabs.addTab(self.tab1, "Acceuil")
         self.tabs.addTab(self.tab2, "Ban List")
         self.tabs.addTab(self.tab3, "mail replacement")
+        self.tabs.addTab(self.tab4, "sub process")
+
 
         
         

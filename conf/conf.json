@@ -1,6 +1,6 @@
 {
-    "input_folder": "excel_folder",
-    "output_folder": "result_folder",
+    "input_folder": "/home/ranelden/Documents/gs11",
+    "output_folder": "/home/ranelden/python_scipt/csv_tri_project/result_folder",
     "utils_list": [
         "utils/black_list.csv",
         "utils/mail.csv"

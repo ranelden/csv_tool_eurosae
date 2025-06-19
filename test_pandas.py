@@ -303,7 +303,7 @@ def main():
 
     exel_to_csv(dossier_source, dossier_cible)
 
-    fusionner_fichiers_par_code(dossier_cible)
+    #fusionner_fichiers_par_code(dossier_cible)
 
     df = csv_traitement(dossier_cible)
 
@@ -315,6 +315,43 @@ def main():
         print("✅ Final CSV written to result_folder/result.csv")
     else:
         print("❌ No data to write.")
+
+def sub_main(source):
+
+    print("🚀 Starting process...")
+
+    #fusionner_fichiers_par_code(dossier_cible)
+
+    df = sub_csv_traitement(source)
+
+    result_folder = "sub_output"
+
+    if df is not None:
+        df.to_excel(f'{result_folder}/result.xlsx', index=False)
+        df.to_csv(f'{result_folder}/result.csv', index=False)
+        print("✅ Final CSV written to result_folder/result.csv")
+    else:
+        print("❌ No data to write.")
+
+def sub_csv_traitement(fichier):
+    print("📁 Processing cleaned CSV files...")
+
+    try:
+        df = pd.read_csv(fichier, encoding='iso-8859-1')
+        df.columns = df.columns.str.replace('\n', '').str.strip()
+            
+    except Exception as e:
+            print(f"❌ Error reading file {fichier} : {e}")
+
+    final_csv = groupping(df)
+    final_csv = groupping_merged_stages(final_csv)
+    final_csv = I1_I2_fusion(final_csv)
+
+    final_csv = normalize_outplut(final_csv)
+
+    final_csv = I1_I2_fusion_correction(final_csv)
+
+    return final_csv
 
 if __name__ == "__main__":
     main()
