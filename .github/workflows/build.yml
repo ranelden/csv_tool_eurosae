@@ -25,7 +25,7 @@ jobs:
         
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onedir --windowed --add-data="conf;conf" --name="MonApplication" main_gui.py
+        pyinstaller --onedir --windowed --add-data="conf;conf" --add-data="conf/ban_list.json;conf" --add-data="conf/conf.json;conf" --add-data="conf/default_conf.json;conf" --add-data="conf/mail.json;conf" --name="MonApplication" main_gui.py
         
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
