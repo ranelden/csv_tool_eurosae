@@ -23,9 +23,14 @@ jobs:
         pip install pyinstaller
         pip install -r requirements.txt
         
-    - name: Build EXE with PyInstaller
+    - name: Build EXE with PyInstaller (onedir)
       run: |
-        pyinstaller --onedir --windowed --add-data="conf;conf" --add-data="conf/ban_list.json;conf" --add-data="conf/conf.json;conf" --add-data="conf/default_conf.json;conf" --add-data="conf/mail.json;conf" --name="MonApplication" main_gui.py
+        pyinstaller --onedir --windowed --add-data="conf;conf" --name="MonApplication" main_gui.py
+        
+    - name: List what was built (debug)
+      run: |
+        dir dist
+        dir "dist/MonApplication"
         
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
