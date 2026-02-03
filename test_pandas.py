@@ -8,7 +8,7 @@ import conf_manager
 import ban_list_manager
 import json
 
-CURRENT_YEAR = 2026
+CURRENT_YEAR = 2025
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
 FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
 #BAN_LIST_PAT = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
@@ -116,7 +116,7 @@ def clear_csv(df):
     df = df.drop_duplicates(subset='Employeuremail', keep='first')
     
     # Filter rows for the current year
-    df = df[df['Stageannée'] != CURRENT_YEAR]
+    df = df[df['Stageannée'] <= CURRENT_YEAR]
     
     
     # Remove rows with empty or invalid emails
