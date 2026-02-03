@@ -80,7 +80,7 @@ def reset_mail_path():
 
 # ---------------------- LOGIQUE METIER (test_pandas.py) ----------------------
 
-CURRENT_YEAR = 2026
+CURRENT_YEAR = 2025
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
 FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
 
@@ -115,7 +115,7 @@ def black_listing(csv):
 
 def clear_csv(df):
     df = df.drop_duplicates(subset='Employeuremail', keep='first')
-    df = df[df['Stageannée'] != CURRENT_YEAR]
+    df = df[df['Stageannée'] <= CURRENT_YEAR]
     df['Employeuremail'] = df['Employeuremail'].replace("", pd.NA)
     df = df.dropna(subset=['Employeuremail'])
     for pattern in get_patt_list():
