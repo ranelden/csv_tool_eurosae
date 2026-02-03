@@ -8,7 +8,7 @@ import conf_manager
 import ban_list_manager
 import json
 
-CURRENT_YEAR = 2025
+CURRENT_YEAR = 2026
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
 FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
 #BAN_LIST_PAT = [r"MBDA.*", r"DGA.*", r"PER.*", r".*@NIIT.*"]
