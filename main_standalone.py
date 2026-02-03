@@ -80,7 +80,7 @@ def reset_mail_path():
 
 # ---------------------- LOGIQUE METIER (test_pandas.py) ----------------------
 
-CURRENT_YEAR = 2025
+CURRENT_YEAR = 2026
 FINAL_DF_COLUMNS = ['list_code_stage', 'list_entreprise', 'list_email']
 FINAL_DF_COLUMNS_2 = ['list_code_stage', 'list_email', 'list_entreprise']
 
